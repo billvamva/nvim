@@ -694,7 +694,7 @@ function RecentBuffers()
 
   local recent_buffers = {}
   for i = 1, math.min(5, #buffers) do
-    table.insert(recent_buffers, buffers[i].name)
+    table.insert(recent_buffers, buffers[i])
   end
 
   DisplayRecentBuffers(recent_buffers, current_buf)
@@ -703,8 +703,8 @@ end
 function DisplayRecentBuffers(buffers, current_buf)
   local lines = { 'Recent Buffers:', '' }
   for i, buf in ipairs(buffers) do
-    local filename = vim.fn.fnamemodify(buf, current_buf)
-    local dir = vim.fn.fnamemodify(buf, ':p:h')
+    local filename = vim.fn.fnamemodify(buf.name, current_buf)
+    local dir = vim.fn.fnamemodify(buf.name, ':h:t')
     local marker = buf.id == current_buf and '*' or ' '
     table.insert(lines, string.format('%s %d: %s', marker, i, filename))
   end
@@ -713,9 +713,44 @@ function DisplayRecentBuffers(buffers, current_buf)
 
   local width = 0
   for _, line in ipairs(lines) do
-    width = math.max(width, #line)
+    width = math.max(width, string.len(line))
+  end
+  width = math.min(width + 2, 80)
+
+  local height = #lines
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  local ui = vim.api.nvim_list_uis()[1]
+
+  local row = math.floor((ui.height - height) / 2)
+  local col = math.floor((ui.width - width) / 2)
+
+  local win = vim.api.nvim_open_win(bufnr, true, {
+    relative = 'editor',
+    row = row,
+    col = col,
+    width = width,
+    height = height,
+    style = 'minimal',
+    border = 'single',
+  })
+
+  vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
+  vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
+
+  vim.api.nvim_win_set_option(win, 'winhl', 'Normal:Normal')
+
+  -- mapping for buffer selection
+  for i = 1, math.min(5, #buffers) do
+    vim.api.nvim_buf_set_keymap(
+      bufnr,
+      'n',
+      tostring(i),
+      string.format(':lua vim.api.nvim_win_close(%d, true); vim.api.nvim_set_current_buf(%d)<CR>', win, buffers[i].id),
+      { noremap = true, silent = true }
+    )
   end
 
-  local height = 0
-    
+  -- escape mapping
+  vim.api.nvim_buf_set_keymap(bufnr, 'n', '<Esc>', string.format(':lua vim.api.nvim_win_close(%d, true)<CR>', win), { noremap = true, silent = true })
 end

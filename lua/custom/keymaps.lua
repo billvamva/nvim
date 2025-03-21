@@ -119,3 +119,5 @@ local function copy_file_path_to_clipboard()
 end
 
 vim.api.nvim_create_user_command('CopyFilePath', copy_file_path_to_clipboard, {})
+
+vim.api.nvim_set_keymap('n', '<leader>cf', ':CopyFilePath<CR>', { noremap = true, silent = true })
