@@ -45,7 +45,6 @@ return {
         },
         yamlls = {},
         gopls = {},
-        jdtls = {},
       },
     },
     config = function(_, opts)

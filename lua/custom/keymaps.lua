@@ -80,6 +80,7 @@ vim.keymap.set('n', '<leader>ee', ':Telescope file_browser<CR>', { desc = 'Open 
 
 -- open file_browser with the path of the current buffer
 vim.keymap.set('n', '<leader>ec', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = 'Open Current Buffer Directory' })
+vim.keymap.set('n', '<leader>en', ':e %:h/<C-r>=input("new file name: ") <CR><CR>', { desc = 'Create new file' })
 
 -- Alternatively, using lua API
 vim.keymap.set('n', '<space>fb', function()
@@ -99,6 +100,95 @@ end
 
 -- Buffer navigation
 -- map('n', '<leader>bp', '<cmd>bprevious<cr>', { desc = 'Previous buffer' })
+function RecentBuffers()
+  local buffers = {}
+  local current_buf = vim.api.nvim_get_current_buf()
+
+  local all_bufs = vim.api.nvim_list_bufs()
+
+  for _, buf in ipairs(all_bufs) do
+    if vim.api.nvim_buf_is_valid(buf) then
+      local name = vim.api.nvim_buf_get_name(buf)
+      if name ~= '' then
+        table.insert(buffers, {
+          id = buf,
+          name = name,
+          is_current = buf == current_buf,
+          last_used = vim.fn.getbufinfo(buf)[1].lastused,
+        })
+      end
+    end
+  end
+
+  table.sort(buffers, function(a, b)
+    return a.last_used > b.last_used
+  end)
+
+  local recent_buffers = {}
+  for i = 1, math.min(5, #buffers) do
+    table.insert(recent_buffers, buffers[i])
+  end
+
+  DisplayRecentBuffers(recent_buffers, current_buf)
+end
+
+function DisplayRecentBuffers(buffers, current_buf)
+  local lines = { 'Recent Buffers:', '' }
+  for i, buf in ipairs(buffers) do
+    local filename = vim.fn.fnamemodify(buf.name, ':t')
+    local dirname = vim.fn.fnamemodify(buf.name, ':h:t')
+    local grandparent = vim.fn.fnamemodify(buf.name, ':h:h:t')
+    local marker = buf.id == current_buf and '*' or ' '
+    local dir_display = grandparent == '' and dirname or grandparent .. '/' .. dirname
+    table.insert(lines, string.format('%s %d: %s :: [%s]', marker, i, filename, dir_display))
+  end
+  table.insert(lines, '')
+  table.insert(lines, 'Press a number to switch to that buffer')
+
+  local width = 0
+  for _, line in ipairs(lines) do
+    width = math.max(width, string.len(line))
+  end
+  width = math.min(width + 2, 80)
+
+  local height = #lines
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  local ui = vim.api.nvim_list_uis()[1]
+
+  local row = math.floor((ui.height - height) / 2)
+  local col = math.floor((ui.width - width) / 2)
+
+  local win = vim.api.nvim_open_win(bufnr, true, {
+    relative = 'editor',
+    row = row,
+    col = col,
+    width = width,
+    height = height,
+    style = 'minimal',
+    border = 'single',
+  })
+
+  vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
+  vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
+
+  vim.api.nvim_win_set_option(win, 'winhl', 'Normal:Normal')
+
+  -- mapping for buffer selection
+  for i = 1, math.min(5, #buffers) do
+    vim.api.nvim_buf_set_keymap(
+      bufnr,
+      'n',
+      tostring(i),
+      string.format(':lua vim.api.nvim_win_close(%d, true); vim.api.nvim_set_current_buf(%d)<CR>', win, buffers[i].id),
+      { noremap = true, silent = true }
+    )
+  end
+
+  -- escape mapping
+  vim.api.nvim_buf_set_keymap(bufnr, 'n', '<Esc>', string.format(':lua vim.api.nvim_win_close(%d, true)<CR>', win), { noremap = true, silent = true })
+end
+
 map('n', '<leader>bp', ':lua RecentBuffers()<CR>', { desc = 'Buffer History' })
 map('n', '<leader>bn', '<cmd>bnext<cr>', { desc = 'Next buffer' })
 

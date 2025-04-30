@@ -483,10 +483,9 @@ require('lazy').setup({
 vim.opt.complete = ''
 vim.opt.omnifunc = ''
 
+require 'custom.diagnostics'
 require 'custom.keymaps'
 require 'custom.options'
-
-require 'custom.diagnostics'
 
 -- Scrollbar configuration
 require('scrollbar').setup()
@@ -495,8 +494,6 @@ require('scrollbar').setup()
 require('scrollbar.handlers.diagnostic').setup()
 
 require('Comment').setup()
-
-require('java').setup()
 
 require('lspconfig').jdtls.setup {}
 
@@ -533,6 +530,20 @@ local kind_icons = {
   Copilot = '',
 }
 
+local ELLIPSIS_CHAR = '…'
+local MAX_LABEL_WIDTH = 40
+local MIN_LABEL_WIDTH = 40
+
+vim.api.nvim_create_autocmd('ColorScheme', {
+  callback = function()
+    vim.api.nvim_set_hl(0, 'CmpPmenu', { bg = '#FFFFFF', fg = '#000000' })
+    vim.api.nvim_set_hl(0, 'CmpPmenuBorder', { fg = '#cccccc', bg = '#ffffff' })
+    vim.api.nvim_set_hl(0, 'CmpDoc', { bg = '#ffffff', fg = '#000000' })
+    vim.api.nvim_set_hl(0, 'CmpDocBorder', { fg = '#cccccc', bg = '#ffffff' })
+    vim.api.nvim_set_hl(0, 'PmenuSel', { bg = '#e0e0e0', fg = '#000000', bold = true })
+  end,
+})
+
 cmp.setup {
   snippet = {
     expand = function(args)
@@ -567,113 +578,31 @@ cmp.setup {
     end, { 'i', 's' }),
   },
   sources = cmp.config.sources {
-    { name = 'copilot' },
     { name = 'nvim_lsp' },
-    -- { name = 'cmp_tabnine' },
-    -- { name = 'luasnip' },
+    { name = 'cmp_tabnine' },
+    { name = 'luasnip' },
+    { name = 'copilot' },
   },
   preselect = cmp.PreselectMode.None,
   window = {
-    documentation = cmp.config.window.bordered(),
+    completion = {
+      winhighlight = 'Normal:CmpPmenu,FloatBorder:CmpPmenuBorder,CursorLine:PmenuSel,Search:None',
+    },
+    documentation = {
+      winhighlight = 'Normal:CmpDoc,FloatBorder:CmpDocBorder',
+    },
   },
-
   formatting = {
     format = function(entry, vim_item)
-      local kind = vim_item.kind
-      if entry.source.name == 'copilot' then
-        kind = 'Copilot'
+      local label = vim_item.abbr
+      local truncated_label = vim.fn.strcharpart(label, 0, MAX_LABEL_WIDTH)
+      if truncated_label ~= label then
+        vim_item.abbr = truncated_label .. ELLIPSIS_CHAR
+      elseif string.len(label) < MIN_LABEL_WIDTH then
+        local padding = string.rep(' ', MIN_LABEL_WIDTH - string.len(label))
+        vim_item.abbr = label .. padding
       end
-      vim_item.kind = string.format('%s %s', kind_icons[kind] or '', kind)
       return vim_item
     end,
   },
 }
-
-function RecentBuffers()
-  local buffers = {}
-  local current_buf = vim.api.nvim_get_current_buf()
-
-  local all_bufs = vim.api.nvim_list_bufs()
-
-  for _, buf in ipairs(all_bufs) do
-    if vim.api.nvim_buf_is_valid(buf) then
-      local name = vim.api.nvim_buf_get_name(buf)
-      if name ~= '' then
-        table.insert(buffers, {
-          id = buf,
-          name = name,
-          is_current = buf == current_buf,
-          last_used = vim.fn.getbufinfo(buf)[1].lastused,
-        })
-      end
-    end
-  end
-
-  table.sort(buffers, function(a, b)
-    return a.last_used > b.last_used
-  end)
-
-  local recent_buffers = {}
-  for i = 1, math.min(5, #buffers) do
-    table.insert(recent_buffers, buffers[i])
-  end
-
-  DisplayRecentBuffers(recent_buffers, current_buf)
-end
-
-function DisplayRecentBuffers(buffers, current_buf)
-  local lines = { 'Recent Buffers:', '' }
-  for i, buf in ipairs(buffers) do
-    local filename = vim.fn.fnamemodify(buf.name, ':t')
-    local dirname = vim.fn.fnamemodify(buf.name, ':h:t')
-    local grandparent = vim.fn.fnamemodify(buf.name, ':h:h:t')
-    local marker = buf.id == current_buf and '*' or ' '
-    local dir_display = grandparent == '' and dirname or grandparent .. '/' .. dirname
-    table.insert(lines, string.format('%s %d: %s :: [%s]', marker, i, filename, dir_display))
-  end
-  table.insert(lines, '')
-  table.insert(lines, 'Press a number to switch to that buffer')
-
-  local width = 0
-  for _, line in ipairs(lines) do
-    width = math.max(width, string.len(line))
-  end
-  width = math.min(width + 2, 80)
-
-  local height = #lines
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-  local ui = vim.api.nvim_list_uis()[1]
-
-  local row = math.floor((ui.height - height) / 2)
-  local col = math.floor((ui.width - width) / 2)
-
-  local win = vim.api.nvim_open_win(bufnr, true, {
-    relative = 'editor',
-    row = row,
-    col = col,
-    width = width,
-    height = height,
-    style = 'minimal',
-    border = 'single',
-  })
-
-  vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
-  vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
-
-  vim.api.nvim_win_set_option(win, 'winhl', 'Normal:Normal')
-
-  -- mapping for buffer selection
-  for i = 1, math.min(5, #buffers) do
-    vim.api.nvim_buf_set_keymap(
-      bufnr,
-      'n',
-      tostring(i),
-      string.format(':lua vim.api.nvim_win_close(%d, true); vim.api.nvim_set_current_buf(%d)<CR>', win, buffers[i].id),
-      { noremap = true, silent = true }
-    )
-  end
-
-  -- escape mapping
-  vim.api.nvim_buf_set_keymap(bufnr, 'n', '<Esc>', string.format(':lua vim.api.nvim_win_close(%d, true)<CR>', win), { noremap = true, silent = true })
-end
