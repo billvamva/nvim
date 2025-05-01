@@ -148,6 +148,7 @@ vim.opt.rtp:prepend(lazypath)
 --
 --  To update plugins you can run
 --    :Lazy update
+
 --
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
@@ -497,52 +498,9 @@ require('Comment').setup()
 
 require('lspconfig').jdtls.setup {}
 
-require('lspconfig').cucumber_language_server.setup {
-  cmd = { 'cucumber-language-server', '--stdio' },
-  filetypes = { 'cucumber', 'feature' },
-  root_dir = require('lspconfig').util.find_git_ancestor,
-  settings = {
-    features = { '**/*.feature' },
-    glue = { 'test/packages/functionality/*_test.go' },
-    formatter = { 'pretty' },
-  },
-}
-
 local luasnip = require 'luasnip'
 
-local client = vim.lsp.start_client {
-  name = 'trillian',
-  cmd = { '/Users/vvamvaka/Documents/redemptions/training/trillian/bin/trillian' },
-  autostart = true,
-}
-if not client then
-  return
-end
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'yaml' },
-  callback = function()
-    vim.lsp.buf_attach_client(0, client)
-  end,
-})
-
 local cmp = require 'cmp'
-local kind_icons = {
-  Copilot = '',
-}
-
-local ELLIPSIS_CHAR = '…'
-local MAX_LABEL_WIDTH = 40
-local MIN_LABEL_WIDTH = 40
-
-vim.api.nvim_create_autocmd('ColorScheme', {
-  callback = function()
-    vim.api.nvim_set_hl(0, 'CmpPmenu', { bg = '#FFFFFF', fg = '#000000' })
-    vim.api.nvim_set_hl(0, 'CmpPmenuBorder', { fg = '#cccccc', bg = '#ffffff' })
-    vim.api.nvim_set_hl(0, 'CmpDoc', { bg = '#ffffff', fg = '#000000' })
-    vim.api.nvim_set_hl(0, 'CmpDocBorder', { fg = '#cccccc', bg = '#ffffff' })
-    vim.api.nvim_set_hl(0, 'PmenuSel', { bg = '#e0e0e0', fg = '#000000', bold = true })
-  end,
-})
 
 cmp.setup {
   snippet = {
@@ -581,7 +539,6 @@ cmp.setup {
     { name = 'nvim_lsp' },
     { name = 'cmp_tabnine' },
     { name = 'luasnip' },
-    { name = 'copilot' },
   },
   preselect = cmp.PreselectMode.None,
   window = {
@@ -591,18 +548,5 @@ cmp.setup {
     documentation = {
       winhighlight = 'Normal:CmpDoc,FloatBorder:CmpDocBorder',
     },
-  },
-  formatting = {
-    format = function(entry, vim_item)
-      local label = vim_item.abbr
-      local truncated_label = vim.fn.strcharpart(label, 0, MAX_LABEL_WIDTH)
-      if truncated_label ~= label then
-        vim_item.abbr = truncated_label .. ELLIPSIS_CHAR
-      elseif string.len(label) < MIN_LABEL_WIDTH then
-        local padding = string.rep(' ', MIN_LABEL_WIDTH - string.len(label))
-        vim_item.abbr = label .. padding
-      end
-      return vim_item
-    end,
   },
 }
