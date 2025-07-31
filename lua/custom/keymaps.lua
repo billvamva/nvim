@@ -74,18 +74,16 @@ vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = 'Get help' })
 vim.keymap.set('n', '<leader>fv', find_files_vsplit, { desc = 'Search files and open in vertical split' })
 vim.keymap.set('n', '<leader>fs', find_files_split, { desc = 'Search files and open in horizontal split' })
 
+local function open_oil_in_current()
+  require('oil').open()
+end
+
 vim.api.nvim_set_keymap('n', '<leader>rw', '<cmd>lua ResizeLeftWindowBigger()<cr>', { noremap = true, silent = true })
 
-vim.keymap.set('n', '<leader>ee', ':Telescope file_browser<CR>', { desc = 'Open the workspace directory' })
-
+vim.keymap.set('n', '<leader>ee', ':Oil<CR>', { desc = 'Open the workspace directory' })
 -- open file_browser with the path of the current buffer
-vim.keymap.set('n', '<leader>ec', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = 'Open Current Buffer Directory' })
+vim.keymap.set('n', '<leader>ec', open_oil_in_current, { desc = 'Open Current Buffer Directory' })
 vim.keymap.set('n', '<leader>en', ':e %:h/<C-r>=input("new file name: ") <CR><CR>', { desc = 'Create new file' })
-
--- Alternatively, using lua API
-vim.keymap.set('n', '<space>fb', function()
-  require('telescope').extensions.file_browser.file_browser()
-end)
 
 local function map(mode, lhs, rhs, opts)
   local keys = require('lazy.core.handler').handlers.keys
@@ -211,3 +209,5 @@ end
 vim.api.nvim_create_user_command('CopyFilePath', copy_file_path_to_clipboard, {})
 
 vim.api.nvim_set_keymap('n', '<leader>cf', ':CopyFilePath<CR>', { noremap = true, silent = true })
+
+vim.keymap.set('n', ',p', '"0p"', { desc = 'Paste from default register' })

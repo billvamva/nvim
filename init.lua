@@ -550,3 +550,28 @@ cmp.setup {
     },
   },
 }
+
+local colors = {
+  bg = '#282828',
+  border = '#f6eee3',
+  title = '#fbf1c7',
+  title_bg = '#3c3836',
+}
+
+local hl_groups = {
+  TelescopePromptNormal = { bg = colors.bg, fg = colors.title },
+  TelescopePromptBorder = { bg = colors.title_bg, fg = colors.border },
+  TelescopePromptTitle = { bg = colors.title_bg, fg = colors.title },
+  TelescopePreviewNormal = { bg = colors.bg, fg = colors.title },
+  TelescopePreviewBorder = { bg = colors.bg, fg = colors.border },
+  TelescopePreviewTitle = { bg = colors.title_bg, fg = colors.title },
+  TelescopeResultsNormal = { bg = colors.bg, fg = colors.title },
+  TelescopeResultsBorder = { bg = colors.bg, fg = colors.border },
+  TelescopeSelection = { bg = '#88A296' },
+}
+
+for group, c in pairs(hl_groups) do
+  vim.api.nvim_set_hl(0, group, c)
+end
+
+require('telescope').setup {}

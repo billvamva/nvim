@@ -25,7 +25,7 @@ return {
       -- Instead of true it can also be a list of languages
       additional_vim_regex_highlighting = false,
     },
-    ensure_installed = { 'go', 'javascript', 'bash', 'c', 'cpp', 'markdown', 'markdown_inline', 'yaml' },
+    ensure_installed = { 'go', 'javascript', 'bash', 'c', 'cpp', 'markdown', 'markdown_inline', 'yaml', 'terraform' },
   },
   config = function(_, opts)
     require('nvim-treesitter.configs').setup(opts)

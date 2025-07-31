@@ -45,6 +45,7 @@ return {
         },
         yamlls = {},
         gopls = {},
+        terraformls = {},
       },
     },
     config = function(_, opts)
